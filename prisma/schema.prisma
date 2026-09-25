@@ -1,0 +1,488 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrganizationRole {
+  GROUP_LEADER
+  GROUP_MEMBER
+}
+
+enum EventStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum BulkOperationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+enum CertificateJobStatus {
+  PENDING
+  PROCESSING
+  RETRY_PENDING
+  COMPLETED
+  DEAD
+}
+
+enum DeliveryStatus {
+  PENDING
+  PROCESSING
+  RETRY_PENDING
+  SENT
+  DELIVERED
+  BOUNCED
+  DEAD
+}
+
+enum EmailProvider {
+  RESEND
+  SMTP
+  SENDGRID
+}
+
+model User {
+  id             String   @id @default(cuid())
+  clerkUserId    String   @unique
+  email          String   @unique
+  name           String
+  organizationId String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  organization        Organization?            @relation("UserOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  membership          OrganizationMember?
+  createdOrganization Organization?            @relation("OrganizationCreator")
+  eventsCreated       Event[]                  @relation("EventCreator")
+  bulkOperations      BulkOperation[]          @relation("BulkOperationRequester")
+  smtpConfigsCreated  OrganizationSmtpConfig[] @relation("SmtpConfigCreator")
+  certificateAssets   CertificateAsset[]       @relation("CertificateAssetUploader")
+  resolvedDeadLetters DeliveryDeadLetter[]     @relation("DeadLetterResolver")
+
+  @@index([organizationId])
+}
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  logoUrl         String?
+  logoPublicId    String?
+  createdByUserId String   @unique
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  createdBy           User                      @relation("OrganizationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  users               User[]                    @relation("UserOrganization")
+  members             OrganizationMember[]
+  events              Event[]
+  smtpConfigs         OrganizationSmtpConfig[]
+  certificateAssets   CertificateAsset[]
+  providerRouteStates EmailProviderRouteState[]
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  userId         String           @unique
+  organizationId String
+  role           OrganizationRole
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3)
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Event {
+  id                  String      @id @default(cuid())
+  organizationId      String
+  createdByUserId     String
+  title               String
+  description         String?
+  organizationName    String
+  organizationLogoUrl String?
+  location            String?
+  eventDate           DateTime?   @db.Timestamptz(3)
+  certificateTitle    String?
+  emailSubject        String?
+  emailBody           String?
+  status              EventStatus @default(DRAFT)
+  createdAt           DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?   @db.Timestamptz(3)
+
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy         User                 @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  participants      Participant[]
+  template          CertificateTemplate?
+  bulkOperations    BulkOperation[]
+  certificateJobs   CertificateJob[]
+  certificates      Certificate[]
+  deliveries        Delivery[]
+  certificateAssets CertificateAsset[]
+
+  @@index([organizationId, deletedAt])
+  @@index([createdByUserId])
+  @@index([status])
+}
+
+model Participant {
+  id                     String    @id @default(cuid())
+  eventId                String
+  name                   String
+  email                  String
+  eligibleForCertificate Boolean   @default(false)
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt              DateTime? @db.Timestamptz(3)
+
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  certificateJobs CertificateJob[]
+  certificates    Certificate[]
+  deliveries      Delivery[]
+
+  @@unique([eventId, email])
+  @@index([eventId, deletedAt])
+  @@index([eventId, deletedAt, createdAt, id])
+  @@index([eventId, deletedAt, eligibleForCertificate, createdAt])
+}
+
+model CertificateTemplate {
+  id            String    @id @default(cuid())
+  eventId       String    @unique
+  assetId       String    @unique
+  backgroundUrl String
+  nameLeft      Decimal   @db.Decimal(6, 3)
+  nameTop       Decimal   @db.Decimal(6, 3)
+  nameRight     Decimal   @db.Decimal(6, 3)
+  nameBottom    Decimal   @db.Decimal(6, 3)
+  fontSize      Int       @default(48)
+  fontColor     String    @default("#000000")
+  fontWeight    String    @default("600")
+  textAlign     String    @default("center")
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime? @db.Timestamptz(3)
+
+  event Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  asset CertificateAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+}
+
+model CertificateAsset {
+  id               String    @id @default(cuid())
+  eventId          String
+  organizationId   String
+  uploadedByUserId String
+  publicId         String    @unique
+  secureUrl        String
+  format           String
+  width            Int
+  height           Int
+  bytes            Int
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt        DateTime? @db.Timestamptz(3)
+
+  event        Event                @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  uploadedBy   User                 @relation("CertificateAssetUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  template     CertificateTemplate?
+
+  @@index([eventId, deletedAt])
+  @@index([organizationId])
+  @@index([uploadedByUserId])
+}
+
+model BulkOperation {
+  id                 String              @id @default(cuid())
+  eventId            String
+  requestedByUserId  String
+  operationRequestId String
+  status             BulkOperationStatus @default(PENDING)
+  totalCount         Int                 @default(0)
+  completedCount     Int                 @default(0)
+  failedCount        Int                 @default(0)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  startedAt          DateTime?           @db.Timestamptz(3)
+  completedAt        DateTime?           @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime?           @db.Timestamptz(3)
+
+  event       Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  requestedBy User             @relation("BulkOperationRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  jobs        CertificateJob[]
+  deliveries  Delivery[]
+
+  @@unique([eventId, operationRequestId])
+  @@index([eventId, deletedAt])
+  @@index([requestedByUserId])
+  @@index([status])
+}
+
+model CertificateJob {
+  id               String               @id @default(cuid())
+  eventId          String
+  participantId    String
+  bulkOperationId  String?
+  requestId        String
+  status           CertificateJobStatus @default(PENDING)
+  attemptCount     Int                  @default(0)
+  maxAttempts      Int                  @default(6)
+  nextAttemptAt    DateTime?            @db.Timestamptz(3)
+  claimedAt        DateTime?            @db.Timestamptz(3)
+  claimedBy        String?
+  startedAt        DateTime?            @db.Timestamptz(3)
+  completedAt      DateTime?            @db.Timestamptz(3)
+  lastErrorCode    String?
+  lastErrorMessage String?
+  createdAt        DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?            @db.Timestamptz(3)
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  participant   Participant    @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  bulkOperation BulkOperation? @relation(fields: [bulkOperationId], references: [id], onDelete: Restrict)
+  certificate   Certificate?
+  delivery      Delivery?      @relation("DeliverySourceJob")
+
+  @@unique([eventId, participantId, requestId])
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([status, claimedAt])
+  @@index([eventId])
+  @@index([participantId])
+  @@index([bulkOperationId])
+}
+
+model Certificate {
+  id                            String   @id @default(cuid())
+  certificateJobId              String   @unique
+  eventId                       String
+  participantId                 String
+  verificationId                String   @unique
+  artifactUrl                   String
+  artifactPublicId              String
+  artifactWidth                 Int
+  artifactHeight                Int
+  participantNameSnapshot       String
+  eventTitleSnapshot            String
+  organizationNameSnapshot      String
+  templateBackgroundUrlSnapshot String
+  nameLeftSnapshot              Decimal  @db.Decimal(6, 3)
+  nameTopSnapshot               Decimal  @db.Decimal(6, 3)
+  nameRightSnapshot             Decimal  @db.Decimal(6, 3)
+  nameBottomSnapshot            Decimal  @db.Decimal(6, 3)
+  fontSizeSnapshot              Int
+  fontColorSnapshot             String
+  fontWeightSnapshot            String
+  textAlignSnapshot             String
+  certificateHash               String
+  issuedAt                      DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                     DateTime @default(now()) @db.Timestamptz(3)
+
+  job         CertificateJob @relation(fields: [certificateJobId], references: [id], onDelete: Restrict)
+  event       Event          @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  participant Participant    @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  deliveries  Delivery[]
+
+  @@unique([eventId, participantId])
+  @@index([eventId])
+  @@index([participantId])
+}
+
+model Delivery {
+  id                     String         @id @default(cuid())
+  sourceCertificateJobId String         @unique
+  certificateId          String
+  eventId                String
+  participantId          String
+  bulkOperationId        String?
+  recipientEmail         String
+  emailSubjectSnapshot   String
+  emailBodySnapshot      String
+  status                 DeliveryStatus @default(PENDING)
+  attemptCount           Int            @default(0)
+  maxAttempts            Int            @default(4)
+  retryCycle             Int            @default(0)
+  claimedAt              DateTime?      @db.Timestamptz(3)
+  claimedBy              String?
+  startedAt              DateTime?      @db.Timestamptz(3)
+  completedAt            DateTime?      @db.Timestamptz(3)
+  lastErrorCode          String?
+  lastErrorMessage       String?
+  createdAt              DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt              DateTime?      @db.Timestamptz(3)
+
+  certificate   Certificate               @relation(fields: [certificateId], references: [id], onDelete: Restrict)
+  sourceJob     CertificateJob            @relation("DeliverySourceJob", fields: [sourceCertificateJobId], references: [id], onDelete: Restrict)
+  event         Event                     @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  participant   Participant               @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  bulkOperation BulkOperation?            @relation(fields: [bulkOperationId], references: [id], onDelete: Restrict)
+  attempts      DeliveryAttempt[]
+  primaryQueue  PrimaryDeliveryQueueItem?
+  retryQueue    RetryDeliveryQueueItem?
+  deadLetters   DeliveryDeadLetter[]
+
+  @@index([status, createdAt])
+  @@index([certificateId])
+  @@index([eventId])
+  @@index([participantId])
+  @@index([bulkOperationId])
+}
+
+model DeliveryAttempt {
+  id                String        @id @default(cuid())
+  deliveryId        String
+  provider          EmailProvider
+  providerRoute     String
+  attemptNumber     Int
+  startedAt         DateTime      @default(now()) @db.Timestamptz(3)
+  completedAt       DateTime?     @db.Timestamptz(3)
+  providerMessageId String?
+  errorCode         String?
+  errorMessage      String?
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  deletedAt         DateTime?     @db.Timestamptz(3)
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+
+  @@unique([deliveryId, attemptNumber])
+}
+
+model PrimaryDeliveryQueueItem {
+  id               String         @id @default(cuid())
+  deliveryId       String         @unique
+  provider         EmailProvider?
+  providerRoute    String?
+  attemptCount     Int            @default(0)
+  maxAttempts      Int            @default(2)
+  nextAttemptAt    DateTime       @default(now()) @db.Timestamptz(3)
+  claimedAt        DateTime?      @db.Timestamptz(3)
+  claimedBy        String?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([nextAttemptAt, createdAt])
+  @@index([claimedAt])
+}
+
+model RetryDeliveryQueueItem {
+  id               String        @id @default(cuid())
+  deliveryId       String        @unique
+  provider         EmailProvider
+  providerRoute    String
+  attemptCount     Int           @default(0)
+  maxAttempts      Int           @default(2)
+  nextAttemptAt    DateTime      @default(now()) @db.Timestamptz(3)
+  claimedAt        DateTime?     @db.Timestamptz(3)
+  claimedBy        String?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([nextAttemptAt, createdAt])
+  @@index([claimedAt])
+}
+
+model DeliveryDeadLetter {
+  id               String         @id @default(cuid())
+  deliveryId       String
+  cycle            Int
+  failedProvider   EmailProvider?
+  providerRoute    String?
+  totalAttempts    Int
+  lastErrorCode    String
+  lastErrorMessage String
+  movedAt          DateTime       @default(now()) @db.Timestamptz(3)
+  resolvedAt       DateTime?      @db.Timestamptz(3)
+  resolvedByUserId String?
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+
+  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  resolvedBy User?    @relation("DeadLetterResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([deliveryId, cycle])
+  @@index([resolvedAt, movedAt])
+  @@index([resolvedByUserId])
+}
+
+model EmailProviderRouteState {
+  id                  String        @id @default(cuid())
+  routeKey            String        @unique
+  provider            EmailProvider
+  organizationId      String?
+  consecutiveFailures Int           @default(0)
+  unhealthyUntil      DateTime?     @db.Timestamptz(3)
+  sendCount           Int           @default(0)
+  sendLimit           Int           @default(1000000)
+  rateLimitPerMinute  Int           @default(60)
+  windowStartedAt     DateTime      @default(now()) @db.Timestamptz(3)
+  windowSendCount     Int           @default(0)
+  createdAt           DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([provider, unhealthyUntil])
+}
+
+model OrganizationSmtpConfig {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  createdByUserId    String
+  label              String
+  host               String
+  port               Int
+  username           String
+  encryptedPassword  String
+  fromName           String
+  fromEmail          String
+  secure             Boolean   @default(true)
+  active             Boolean   @default(true)
+  sendCount          Int       @default(0)
+  sendLimit          Int       @default(10000)
+  rateLimitPerMinute Int       @default(30)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt          DateTime? @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy    User         @relation("SmtpConfigCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, active, deletedAt])
+  @@index([createdByUserId])
+}
+
+model WorkerLease {
+  id             String    @id @default(cuid())
+  pool           String
+  slot           Int
+  workerId       String?
+  claimedAt      DateTime? @db.Timestamptz(3)
+  heartbeatAt    DateTime? @db.Timestamptz(3)
+  leaseExpiresAt DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@unique([pool, slot])
+  @@index([pool, leaseExpiresAt])
+  @@index([workerId])
+}

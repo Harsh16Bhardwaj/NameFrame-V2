@@ -1,0 +1,19 @@
+# dependencies
+/node_modules/
+
+# Next.js
+/.next/
+/out/
+
+# local secrets
+.env
+.env.local
+.env.*.local
+
+# generated and local tooling
+/src/generated/prisma/
+/.vercel/
+/coverage/
+*.tsbuildinfo
+npm-debug.log*
+
