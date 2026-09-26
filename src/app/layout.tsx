@@ -11,8 +11,28 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-app-sans" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-app-mono" });
 
 export const metadata: Metadata = {
-  title: "NameFrame — Certificates, without the chaos",
-  description: "Create, personalize, send, and track event certificates from one reliable workspace.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  title: "NameFrame : Onestop Post Event Certification Solution",
+  description: "NameFrame is an end-to-end post-event certification solution for creating, personalizing, verifying, and delivering certificates at scale.",
+  applicationName: "NameFrame",
+  keywords: ["event certificates", "certificate automation", "post-event certification", "bulk certificate generation", "certificate verification", "certificate delivery"],
+  authors: [{ name: "NameFrame" }],
+  creator: "NameFrame",
+  publisher: "NameFrame",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "NameFrame",
+    title: "NameFrame : Onestop Post Event Certification Solution",
+    description: "Create, verify, and deliver polished event certificates from one dependable workspace.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary",
+    title: "NameFrame : Onestop Post Event Certification Solution",
+    description: "The dependable post-event certification workspace for modern event teams.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

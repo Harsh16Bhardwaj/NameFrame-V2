@@ -1,6 +1,6 @@
-# Sertify
+# NameFrame : Onestop Post Event Certification Solution
 
-Sertify is a ground-up rewrite of NameFrame focused on reliable certificate generation and delivery workflows. Sprint 1 established the application and durable-state foundation. Sprint 2 added organization setup, resumable event drafts, Cloudinary-backed certificate backgrounds, normalized name placement, and event/template editing. Sprint 3 added participant management and browser-side CSV/XLSX import. Sprint 4 adds PostgreSQL-backed certificate jobs and a protected Vercel-triggered worker runtime. Certificate rendering and email execution remain out of scope.
+NameFrame is an end-to-end post-event certification solution for creating, personalizing, verifying, and delivering certificates at scale. It brings event setup, participant imports, visual certificate design, durable generation jobs, provider-aware email delivery, recovery controls, and public verification into one organization-scoped workspace.
 
 ## Stack
 

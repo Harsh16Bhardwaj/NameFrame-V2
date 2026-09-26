@@ -137,6 +137,8 @@ Sprint 08 — Dashboard, Operational Visibility & Manual Recovery (in progress)
 - Landing metrics now use evidence-based synthetic throughput wording, and workflow, trust, FAQ, and metric cards received a larger bordered visual hierarchy. TypeScript, ESLint, production build, and localhost HTTP 200 pass after this pass.
 - Hardened public verification input: pasted verification labels, full `/verify/...` links, URL-encoded values, whitespace, and case differences are normalized before the UUID/database lookup. The latest live certificate link was verified directly; TypeScript, ESLint, and all 39 unit tests pass.
 - Capped the event-management Recent certificate runs activity viewport at a fixed height with an internal scroll area, preserving the page layout as new worker activity arrives.
+- Added dashboard visual analytics from existing organization aggregates: delivery-mix doughnut, sent/in-progress/attention legend, and participant-volume bars for the five latest events. No synthetic throughput or timing values were added.
+- Added the product title and basic SEO metadata for NameFrame, plus public robots and sitemap routes that keep authenticated workspace and API paths out of indexing.
 
 ## Future improvements
 

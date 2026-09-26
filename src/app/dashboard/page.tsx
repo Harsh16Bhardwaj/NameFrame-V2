@@ -27,6 +27,10 @@ export default async function DashboardPage() {
   const totalDeliveryWork = metrics.sentDeliveries + metrics.pendingDeliveries + metrics.deadDeliveries;
   const deliveryRate = totalDeliveryWork ? Math.round(metrics.sentDeliveries / totalDeliveryWork * 100) : 0;
   const eligibleRate = metrics.totalParticipants ? Math.round(metrics.eligibleParticipants / metrics.totalParticipants * 100) : 0;
+  const pendingDeliveryRate = totalDeliveryWork ? Math.round(metrics.pendingDeliveries / totalDeliveryWork * 100) : 0;
+  const sentSweep = deliveryRate;
+  const pendingSweep = sentSweep + pendingDeliveryRate;
+  const largestEventParticipantCount = Math.max(1, ...dashboard.recentEvents.map((event) => event._count.participants));
 
   return (
     <AppShell className="dashboard-workspace">
@@ -42,6 +46,23 @@ export default async function DashboardPage() {
       <section className="dashboard-analysis-grid" aria-label="Operational analytics">
         <article className="panel analytics-summary-card"><div className="section-heading"><div><p className="eyebrow">Readiness</p><h2>Participant eligibility</h2></div><strong>{eligibleRate}%</strong></div><div className="analytics-progress"><i style={{ width: `${eligibleRate}%` }}/></div><p>{metrics.eligibleParticipants} of {metrics.totalParticipants} participant entries are ready for certificate generation.</p></article>
         <article className="panel analytics-summary-card"><div className="section-heading"><div><p className="eyebrow">Delivery</p><h2>Email completion</h2></div><strong>{deliveryRate}%</strong></div><div className="analytics-progress"><i style={{ width: `${deliveryRate}%` }}/></div><p>{metrics.sentDeliveries} sent · {metrics.pendingDeliveries} pending · {metrics.deadDeliveries} need attention.</p></article>
+      </section>
+
+      <section className="dashboard-visual-grid" aria-label="Visual operational analytics">
+        <article className="panel dashboard-chart-card dashboard-fulfilment-card">
+          <div className="section-heading"><div><p className="eyebrow">Work fulfilment</p><h2>Delivery mix</h2></div><AppIcon name="certificate" size={19}/></div>
+          <div className="dashboard-donut-layout">
+            <div className="dashboard-donut" style={{ background: `conic-gradient(#397866 0 ${sentSweep}%, #c18a43 ${sentSweep}% ${pendingSweep}%, #a3484f ${pendingSweep}% 100%)` }}><div><strong>{deliveryRate}%</strong><span>accepted</span></div></div>
+            <div className="dashboard-legend"><div><i className="legend-dot legend-sent"/><span>Sent</span><strong>{metrics.sentDeliveries}</strong></div><div><i className="legend-dot legend-pending"/><span>In progress</span><strong>{metrics.pendingDeliveries}</strong></div><div><i className="legend-dot legend-dead"/><span>Needs attention</span><strong>{metrics.deadDeliveries}</strong></div></div>
+          </div>
+          <p className="chart-note">A live view of all email delivery work across the organization.</p>
+        </article>
+
+        <article className="panel dashboard-chart-card dashboard-events-chart-card">
+          <div className="section-heading"><div><p className="eyebrow">Event distribution</p><h2>Participants by event</h2></div><AppIcon name="participants" size={19}/></div>
+          {dashboard.recentEvents.length ? <div className="dashboard-event-bars">{dashboard.recentEvents.slice(0, 5).map((event) => { const participants = event._count.participants; const deliveries = event._count.deliveries; return <div className="dashboard-event-bar-row" key={event.id}><div className="dashboard-event-bar-label"><strong>{event.title || "Untitled draft"}</strong><span>{participants} participants · {deliveries} emails</span></div><div className="dashboard-event-bar-track"><i style={{ width: `${Math.max(participants ? 5 : 0, participants / largestEventParticipantCount * 100)}%` }}/><b>{participants}</b></div></div>; })}</div> : <div className="empty-state compact-empty"><p>No event distribution yet.</p></div>}
+          <p className="chart-note">The five most recently updated events, sized by participant volume.</p>
+        </article>
       </section>
 
       <div className="dashboard-columns">
