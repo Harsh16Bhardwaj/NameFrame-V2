@@ -142,6 +142,7 @@ Sprint 08 — Dashboard, Operational Visibility & Manual Recovery (in progress)
 - Added dashboard visual analytics from existing organization aggregates: delivery-mix doughnut, sent/in-progress/attention legend, and participant-volume bars for the five latest events. No synthetic throughput or timing values were added.
 - Added the product title and basic SEO metadata for NameFrame, plus public robots and sitemap routes that keep authenticated workspace and API paths out of indexing.
 - Reused the original NameFrame favicon geometry from the sibling implementation and added a white 32px `icon.png` for the Next.js app icon.
+- Replaced the README with a pipeline-focused engineering overview covering capabilities, queue and worker behavior, certificate integrity, measured synthetic timings, 1,000-item capacity mapping, and the 300-mail reliability result.
 
 ## Future improvements
 
