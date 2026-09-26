@@ -7,7 +7,7 @@ type DeliveryMessageSource = {
   recipientEmail: string;
   emailSubjectSnapshot: string;
   emailBodySnapshot: string;
-  certificate: { artifactUrl: string; eventTitleSnapshot: string; organizationNameSnapshot: string };
+  certificate: { verificationId?: string; artifactUrl: string; eventTitleSnapshot: string; organizationNameSnapshot: string };
 };
 
 export async function buildDeliveryMessage(
@@ -16,14 +16,20 @@ export async function buildDeliveryMessage(
   fetcher: typeof fetch = fetch,
 ): Promise<EmailMessage> {
   const certificateUrl = delivery.certificate.artifactUrl;
+  const verificationId = delivery.certificate.verificationId;
+  const verificationUrl = verificationId ? `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/verify/${verificationId}` : null;
   const body = delivery.emailBodySnapshot.trim();
   const text = [
     body,
     `Certificate: ${certificateUrl}`,
+    verificationId ? `Verification code: ${verificationId}` : "",
+    verificationUrl ? `Verify your certificate: ${verificationUrl}` : "",
   ].filter(Boolean).join("\n\n");
   const html = [
     `<p>${escapeHtml(body).replace(/\n/g, "<br>")}</p>`,
     `<p><a href="${escapeHtml(certificateUrl)}">View your certificate</a></p>`,
+    verificationId ? `<p><strong>Verification code:</strong> ${escapeHtml(verificationId)}</p>` : "",
+    verificationUrl ? `<p><a href="${escapeHtml(verificationUrl)}">Verify certificate authenticity</a></p>` : "",
   ].join("");
   const attachment = await fetchCertificateAttachment(certificateUrl, delivery.id, fetcher);
 

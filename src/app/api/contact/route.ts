@@ -15,16 +15,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Please provide a valid name, email, and message." }, { status: 400 });
     }
 
-    const host = process.env.SITE_SMTP_HOST;
-    const user = process.env.SITE_SMTP_USERNAME;
-    const password = process.env.SITE_SMTP_PASSWORD;
-    const from = process.env.SITE_SMTP_FROM_EMAIL;
-    const destination = process.env.CONTACT_EMAIL;
+    const legacyGmail = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
+    const host = process.env.SITE_SMTP_HOST ?? (legacyGmail ? "smtp.gmail.com" : undefined);
+    const user = process.env.SITE_SMTP_USERNAME ?? process.env.EMAIL_USER;
+    const password = process.env.SITE_SMTP_PASSWORD ?? process.env.EMAIL_PASSWORD;
+    const from = process.env.SITE_SMTP_FROM_EMAIL ?? process.env.EMAIL_USER;
+    const destination = process.env.CONTACT_EMAIL ?? process.env.EMAIL_USER;
     if (!host || !user || !password || !from || !destination) {
       return NextResponse.json({ success: false, error: "Contact delivery is not configured yet. Please email support@nameframe.site directly." }, { status: 503 });
     }
 
-    const transporter = nodemailer.createTransport({ host, port: Number(process.env.SITE_SMTP_PORT ?? 587), secure: process.env.SITE_SMTP_SECURE === "true", auth: { user, pass: password }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000 });
+    const transporter = nodemailer.createTransport({ host, port: Number(process.env.SITE_SMTP_PORT ?? (legacyGmail ? 465 : 587)), secure: legacyGmail && !process.env.SITE_SMTP_HOST ? true : process.env.SITE_SMTP_SECURE === "true", auth: { user, pass: password }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000 });
     await transporter.sendMail({ from, to: destination, replyTo: email, subject: `[NameFrame contact] ${caseType}`, text: [`Name: ${name}`, `Email: ${email}`, phone ? `Phone: ${phone}` : "", `Topic: ${caseType}`, "", message].filter(Boolean).join("\n") });
     return NextResponse.json({ success: true, message: "Message sent. We’ll get back to you soon." });
   } catch (error) {

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const columns = [
   ["Explore", [["Home","/"],["How it works","#workflow"],["Features","#operations"],["Pricing","#answers"]]],
-  ["Product", [["Dashboard","/dashboard"],["Create event","/events/new"],["Verify certificates","#operations"],["Templates","/templates"]]],
+  ["Product", [["Dashboard","/dashboard"],["Create event","/events/new"],["Verify certificates","/verify"],["Templates","/templates"]]],
   ["Resources", [["FAQs","#answers"],["How it works","#workflow"],["Use cases","#stories"],["Support","mailto:support@nameframe.site"]]],
   ["Contact", [["Contact team","/contact"],["Collab hub","/contact"],["Press kit","#answers"]]],
 ] as const;

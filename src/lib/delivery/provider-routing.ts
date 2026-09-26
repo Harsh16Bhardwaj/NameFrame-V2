@@ -76,20 +76,23 @@ async function buildProviderCandidates(organizationId: string): Promise<Resolved
 }
 
 function readSiteSmtp(): ResolvedEmailRoute | null {
-  const host = process.env.SITE_SMTP_HOST;
-  const port = positiveInteger(process.env.SITE_SMTP_PORT);
-  const username = process.env.SITE_SMTP_USERNAME;
-  const password = process.env.SITE_SMTP_PASSWORD;
-  const fromEmail = process.env.SITE_SMTP_FROM_EMAIL;
+  const legacyUsername = process.env.EMAIL_USER;
+  const legacyPassword = process.env.EMAIL_PASSWORD;
+  const legacyGmail = Boolean(legacyUsername && legacyPassword);
+  const host = process.env.SITE_SMTP_HOST ?? (legacyGmail ? "smtp.gmail.com" : undefined);
+  const port = positiveInteger(process.env.SITE_SMTP_PORT) ?? (legacyGmail ? 465 : null);
+  const username = process.env.SITE_SMTP_USERNAME ?? legacyUsername;
+  const password = process.env.SITE_SMTP_PASSWORD ?? legacyPassword;
+  const fromEmail = process.env.SITE_SMTP_FROM_EMAIL ?? legacyUsername;
   if (!host || !port || !username || !password || !fromEmail) return null;
   return {
-    key: "site-smtp",
+    key: legacyGmail && !process.env.SITE_SMTP_HOST ? "legacy-gmail-smtp" : "site-smtp",
     provider: EmailProvider.SMTP,
     fromName: process.env.SITE_SMTP_FROM_NAME?.trim() || "NameFrame",
     fromEmail,
     rateLimitPerMinute: positiveInteger(process.env.SITE_SMTP_RATE_LIMIT_PER_MINUTE) ?? 30,
     sendLimit: positiveInteger(process.env.SITE_SMTP_SEND_LIMIT) ?? 1_000_000,
-    adapter: new SmtpEmailProvider({ host, port, username, password, secure: process.env.SITE_SMTP_SECURE !== "false" }),
+    adapter: new SmtpEmailProvider({ host, port, username, password, secure: legacyGmail && !process.env.SITE_SMTP_HOST ? true : process.env.SITE_SMTP_SECURE !== "false" }),
   };
 }
 

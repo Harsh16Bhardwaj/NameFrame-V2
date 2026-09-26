@@ -11,6 +11,7 @@ test("delivery email always includes the immutable certificate link", async () =
     emailSubjectSnapshot: "Your certificate",
     emailBodySnapshot: "Well done <winner>!",
     certificate: {
+      verificationId: "05a86883-88b0-4abe-b668-a3cce4b2d03c",
       artifactUrl: "https://assets.example.test/certificate.png",
       eventTitleSnapshot: "Event",
       organizationNameSnapshot: "Organization",
@@ -18,6 +19,8 @@ test("delivery email always includes the immutable certificate link", async () =
   }, { fromName: "NameFrame", fromEmail: "certificates@example.test" }, async () => new Response(null, { status: 503 }));
 
   assert.match(message.text, /https:\/\/assets\.example\.test\/certificate\.png/);
+  assert.match(message.text, /Verification code: 05a86883-88b0-4abe-b668-a3cce4b2d03c/);
+  assert.match(message.text, /\/verify\/05a86883-88b0-4abe-b668-a3cce4b2d03c/);
   assert.match(message.html, /View your certificate/);
   assert.match(message.html, /&lt;winner&gt;/);
   assert.equal(message.attachment, undefined);
