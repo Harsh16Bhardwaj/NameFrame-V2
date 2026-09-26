@@ -42,6 +42,24 @@ export async function dispatchWorkerPools() {
   };
 }
 
+export async function hasRunnableWork(eventId: string, now = new Date()): Promise<boolean> {
+  const [certificateJob, primaryDelivery, retryDelivery] = await Promise.all([
+    prisma.certificateJob.findFirst({
+      where: { eventId, deletedAt: null, OR: [{ status: "PENDING" }, { status: "RETRY_PENDING", nextAttemptAt: { lte: now } }] },
+      select: { id: true },
+    }),
+    prisma.primaryDeliveryQueueItem.findFirst({
+      where: { claimedAt: null, nextAttemptAt: { lte: now }, delivery: { eventId, deletedAt: null } },
+      select: { id: true },
+    }),
+    prisma.retryDeliveryQueueItem.findFirst({
+      where: { claimedAt: null, nextAttemptAt: { lte: now }, delivery: { eventId, deletedAt: null } },
+      select: { id: true },
+    }),
+  ]);
+  return Boolean(certificateJob || primaryDelivery || retryDelivery);
+}
+
 export async function runWorkerPool(pool: WorkerPoolName): Promise<WorkerRunSummary> {
   const startedAt = Date.now();
   const leases = await acquireWorkerLeases(pool);
