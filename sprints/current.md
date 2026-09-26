@@ -139,6 +139,7 @@ Sprint 08 — Dashboard, Operational Visibility & Manual Recovery (in progress)
 - Capped the event-management Recent certificate runs activity viewport at a fixed height with an internal scroll area, preserving the page layout as new worker activity arrives.
 - Added dashboard visual analytics from existing organization aggregates: delivery-mix doughnut, sent/in-progress/attention legend, and participant-volume bars for the five latest events. No synthetic throughput or timing values were added.
 - Added the product title and basic SEO metadata for NameFrame, plus public robots and sitemap routes that keep authenticated workspace and API paths out of indexing.
+- Reused the original NameFrame favicon geometry from the sibling implementation and added a white 32px `icon.png` for the Next.js app icon.
 
 ## Future improvements
 
