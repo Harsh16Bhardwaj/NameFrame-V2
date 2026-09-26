@@ -37,6 +37,7 @@ Sprint 08 — Dashboard, Operational Visibility & Manual Recovery (in progress)
 - Manually reproduced the `notharsh05@gmail.com` flow: generation completed, but Resend test mode rejected the recipient because the account only permits `cloudharsh24@gmail.com` until a sending domain is verified. The exact smoke-test participant, job, delivery, attempt, and Cloudinary artifact were removed afterward.
 - Reworked sign-in and sign-up into a responsive split layout while keeping Clerk responsible for authentication UI and behavior.
 - Added a focused mobile workspace pass: compact sticky navigation, stacked dashboard/event actions, readable KPI cards, reachable participant controls, internally scrollable data tables/activity, and single-column organization/template forms without horizontal page overflow.
+- Polished the collapsed mobile auth surface with a compact branded form card, clearer hierarchy, tighter Clerk field rhythm, and responsive padding without changing the authentication flow.
 - Sprint 09 was completed before Sprints 07 and 08 by explicit user direction, with no UI changes.
 - Audited every private API for authentication, organization ownership, and established leader/member role checks; protected event, job, and delivery reads are organization-scoped at query time.
 - Added lightweight per-user, per-instance rate limits to event creation and single, bulk, and manual retry send initiation. Durable Sprint 06 provider limits remain authoritative.
